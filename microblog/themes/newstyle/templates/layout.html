@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8">
+    <link rel="shortcut icon" href="{{ theme_static('image/favicon.ico') }}" type="image/x-icon" />
+    <link href="{{ theme_static('css/bootstrap.css') }}" rel="stylesheet" media="screen" />
+    <link href="{{ theme_static('css/style.css') }}" rel="stylesheet" media="screen" />
+</head>
+<body>
+{% from theme('_macro.html') import img_avatar, show_microblog, show_comment_box%}
+{% from theme('_macro.html') import render_pagination, group_modal %}
+{% set active = active|default('index') %}
+{% include theme('header.html') %}
+{% include theme('flash.html') %}
+{% block content %}{% endblock %}
+{% include theme('footer.html') %}
+</body>
+<script src="{{ theme_static('js/jquery.js') }}"></script>
+<script src="{{ theme_static('js/bootstrap.js') }}"></script>
+{% block script %}{% endblock %}
+</html>

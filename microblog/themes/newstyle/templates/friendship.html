@@ -1,0 +1,158 @@
+{% extends theme('layout.html') %}
+{% set active = 'friendship' %}
+{% block title %}好友 | {{ title }}{% endblock %}
+{% block content %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-lg-3">
+            <div class="input-group">
+                <input type="text" class="form-control" />
+                <span class="input-group-btn">
+                    <button class="btn btn-default" type="button">搜索</button>
+                </span>
+            </div>
+            <hr />
+            <div class="divider"></div>
+            <ul class="nav nav-pills nav-stacked">
+                <li{%- if active_page == 'show_following' %} class="active"{% endif -%}><a href="{{ url_for('friendship.show_following') }}"><span class="badge pull-right">{{ g.user.following.count() }}</span>我关注的人</a></li>
+                <li{%- if active_page == 'show_followed' %} class="active"{% endif -%}><a href="{{ url_for('friendship.show_followed') }}"><span class="badge pull-right">{{ g.user.followed.count() }}</span>关注我的人</a></li>
+                <li{%- if active_page == 'show_mutual' %} class="active"{% endif -%}><a href="{{ url_for('friendship.show_mutual') }}"><span class="badge pull-right">{{ g.user.get_mutual().count() }}</span>互相关注</a></li>
+                <li{%- if active_page == 'show_blocking' %} class="active"{% endif -%}><a href="{{ url_for('friendship.show_blocking') }}"><span class="badge pull-right">{{ g.user.blocking.count() }}</span>黑名单</a></li>
+            </ul>
+        </div>
+
+        <div class="col-lg-9">
+            {% if active_page == 'show_following' %}
+            <ul class="nav nav-tabs">
+                <li{%- if not active_gid %} class="active"{% endif -%}><a href="{{ url_for('friendship.show_following') }}">全部</a></li>
+                {% for group in g.user.groups %}
+                <li{%- if active_gid == group.id %} class="active"{% endif -%}><a href="{{ url_for('friendship.show_following', gid=group.id) }}">{{ group.name }}</a></li>
+                {% endfor %}
+                <li><a data-toggle="modal" data-target="#add-group">&nbsp;<span class="glyphicon glyphicon-plus"></span>&nbsp;</a></li>
+            </ul>
+            {% else %}
+            <ul class="nav nav-tabs">
+                <li class="active"><a>全部</a></li>
+            </ul>
+            {% endif %}
+            <div id="people" style="padding: 20px 10px;">
+
+                <ul class="media-list">
+                    {% for p in people %}
+                    <li>
+                        <div class="row">
+                            <a class="col-lg-2" href="{{ url_for('frontend.people', id=p.id) }}">
+                                {{ img_avatar(p) }}
+                            </a>
+                            <div class="media-body col-lg-8">
+                                <div style="padding-top: 5px; padding-bottom: 5px;">
+                                    <a href="{{ url_for('frontend.people', id=p.id) }}"><span class="media-heading">{{ p.nickname }}</span></a>
+                                    <span><small>&nbsp;男</small></span>
+                                    <span><small>&nbsp;陕西西安</small></span>
+                                </div>
+
+                                <p class="well">个人简介在这里~</p>
+                            </div>
+                            <div class="btn-group-vertical">
+                                {% if g.user.is_blocking(p.id) %}
+                                <a class="btn btn-default" href="{{ url_for('friendship.unblock', id=p.id) }}">移出黑名单</a>
+                                {% else %}
+                                {% if g.user.is_following(p.id) %}
+                                <a class="btn btn-default" href="{{ url_for('friendship.unfollow', id=p.id) }}">取消关注</a>
+                                {% if g.user.groups.count() %}
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+                                    &nbsp;选择分组&nbsp;<span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu" role="menu">
+                                        {% for group in g.user.groups %}
+                                        {% if group.id != active_gid %}
+                                        <li><a href="{{ url_for('friendship.move_to_group', pid=p.id, gid=group.id) }}">{{ group.name }}</a></li>
+                                        {% endif %}
+                                        {% endfor %}
+                                        {% if active_gid %}
+                                        <li><a href="{{ url_for('friendship.move_to_group', pid=p.id) }}">默认分组</a></li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+                                {% else %}
+                                <a class="btn btn-default" href="{{ url_for('friendship.follow', id=p.id) }}">加关注</a>
+                                {% endif %}
+                                <a class="btn btn-default" href="{{ url_for('friendship.block', id=p.id) }}">加入黑名单</a>
+                                <a class="btn btn-default" href="{{ url_for('friendship.send_chatting', id=p.id) }}">私信</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </li>
+                    {% if not loop.last %}<hr class="invisible"/>{% endif %}
+                    {% endfor %}
+                </ul>
+                {{ render_pagination(pagination, 'friendship.'~active_page ) }}
+
+                {% if active_page == 'show_following' and active_gid %}
+                <hr />
+                <div class="btn-group pull-right">
+                    <a data-toggle="modal" data-target="#rename-group" class="btn btn-primary btn-xs">重命名</a>
+                    <a href="{{ url_for('friendship.delete_group', id=active_gid) }}" class="btn btn-danger btn-xs">删除分组</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% if active_page == 'show_following' %}
+<div class="modal fade" id="add-group" tabindex="-1" role="dialog" aria-labelledby="add-group-label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title text-center" id="add-group-label">新建分组</h4>
+            </div>
+            <form action="{{ url_for('friendship.add_group') }}" method="POST">
+                <div class="modal-body text-center">
+                    <div class="row">
+                    {{ add_group_form.name(class_='form-control', placeholder='请输入分组名称……') }}
+                    </div>
+                </div>
+
+            <div class="modal-footer">
+                {{ add_group_form.submit(class_='btn btn-primary') }}
+                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+            </div>
+            {{ add_group_form.hidden_tag() }}
+            </form>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+{% if active_gid %}
+<div class="modal fade" id="rename-group" tabindex="-1" role="dialog" aria-labelledby="rename-group-label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title text-center" id="rename-group-label">重命名分组</h4>
+            </div>
+            <form action="{{ url_for('friendship.rename_group', id=active_gid) }}" method="POST">
+                <div class="modal-body text-center">
+                    <div class="row">
+                    {{ rename_group_form.name(class_='form-control', placeholder='请输入分组名称……') }}
+                    </div>
+                </div>
+
+            <div class="modal-footer">
+                {{ rename_group_form.submit(class_='btn btn-primary') }}
+                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+            </div>
+            {{ rename_group_form.hidden_tag() }}
+            </form>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+{% endif %}
+{% endif %}
+{% endblock %}
